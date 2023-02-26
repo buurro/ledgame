@@ -27,9 +27,6 @@ BLUE = graphics.create_pen(0, 0, 255)
 CYAN = graphics.create_pen(0, 255, 255)
 RED = graphics.create_pen(255, 0, 0)
 
-KeySettings = namedtuple("KeySettings", ["columns", "color"])
-HitObject = namedtuple("HitObject", ["key", "time"])
-
 keys_settings = {
     4: {
         0: KeySettings([0, 1], PURPLE),
@@ -48,9 +45,6 @@ keys_settings = {
 
 machine.freq(200000000)
 gu.set_brightness(BRIGHTNESS)
-
-
-HitObject = namedtuple("HitObject", ["key", "time"])
 
 
 class Beatmap:
