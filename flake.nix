@@ -15,15 +15,14 @@
       {
         devShells = {
           default = pkgs.mkShell {
-            buildInputs = [ ampy pkgs.black ];
+            packages = with pkgs; [
+              ampy
+              poetry
+            ];
             shellHook = ''
               export AMPY_PORT=/dev/tty.usbmodem1413201
             '';
           };
-        };
-        apps.ampy = {
-          type = "app";
-          program = "${ampy}/bin/ampy";
         };
       }
     );
