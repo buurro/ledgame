@@ -12,7 +12,7 @@ BRIGHTNESS = 0.5
 HITOBJECTS_BUFFER_SIZE = 150  # number of hitobjects to buffer
 BEATMAP_FILENAME = "blue_rose.osu"
 
-KeySettings = namedtuple("KeySettings", ["columns", "color"])
+KeySettings = namedtuple("KeySettings", ["color", "columns"])
 HitObject = namedtuple("HitObject", ["key", "time"])
 
 # create a PicoGraphics framebuffer to draw into
@@ -29,21 +29,21 @@ RED = graphics.create_pen(255, 0, 0)
 
 keys_settings = {
     4: {
-        0: KeySettings([0, 1], PURPLE),
-        1: KeySettings([3, 4], BLUE),
-        2: KeySettings([6, 7], BLUE),
-        3: KeySettings([9, 10], PURPLE),
+        0: KeySettings(PURPLE, columns=[0, 1]),
+        1: KeySettings(BLUE, columns=[3, 4]),
+        2: KeySettings(BLUE, columns=[6, 7]),
+        3: KeySettings(PURPLE, columns=[9, 10]),
     },
     5: {
-        0: KeySettings([0], PURPLE),
-        1: KeySettings([2], BLUE),
-        2: KeySettings([5], RED),
-        3: KeySettings([7], BLUE),
-        4: KeySettings([9], PURPLE),
+        0: KeySettings(PURPLE, columns=[0]),
+        1: KeySettings(BLUE, columns=[2]),
+        2: KeySettings(RED, columns=[5]),
+        3: KeySettings(BLUE, columns=[7]),
+        4: KeySettings(PURPLE, columns=[9]),
     },
 }
 
-machine.freq(200000000)
+machine.freq(200_000_000)
 gu.set_brightness(BRIGHTNESS)
 
 
@@ -81,7 +81,6 @@ class Beatmap:
                     continue
 
                 line = line.strip().split(",")
-                key = (int(line[0]) - 64) // 128
                 key = floor(int(line[0]) / (512 / self.keys))
                 hit_time = int(line[2])
 
@@ -92,8 +91,9 @@ class Beatmap:
 
 class Gameplay:
     beatmap: Beatmap
+    start_time: int | None = None
     time = 0
-    start_time: int | None
+    hits = 0
     hitobjects: list[HitObject] = []
 
     def __init__(self, beatmap):
@@ -102,7 +102,7 @@ class Gameplay:
     def _get_key_info(self, key):
         return keys_settings[self.beatmap.keys][key]
 
-    def render(self):
+    def _render(self):
         while True:
             if self.start_time is None:
                 raise ValueError("Gameplay has not started yet")
@@ -118,6 +118,7 @@ class Gameplay:
                     break
                 remaining_time = hitobject.time - current_time
                 if remaining_time < 0:
+                    self.hits += 1
                     self.hitobjects.remove(hitobject)
                     continue
 
@@ -132,7 +133,7 @@ class Gameplay:
 
     def start(self):
         self.start_time = time.ticks_ms()
-        _thread.start_new_thread(self.render, ())
+        _thread.start_new_thread(self._render, ())
         for hitobject in self.beatmap.hitobjects:
             while len(self.hitobjects) >= HITOBJECTS_BUFFER_SIZE:
                 time.sleep_ms(50)
