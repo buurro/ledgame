@@ -10,7 +10,7 @@ from picographics import DISPLAY_GALACTIC_UNICORN, PicoGraphics
 SCROLL_TIME = 750  # time in ms for a note to scroll across the screen
 BRIGHTNESS = 0.5
 HIT_OBJECTS_BUFFER_SIZE = 200  # number of hitobjects to buffer
-BEATMAP_FILENAME = "happy_end_of_the_world.osu"
+BEATMAP_FILENAME = "blue_rose.osu"
 
 # create a PicoGraphics framebuffer to draw into
 graphics = PicoGraphics(display=DISPLAY_GALACTIC_UNICORN)
@@ -27,16 +27,16 @@ RED = graphics.create_pen(255, 0, 0)
 keys_settings = {
     4: {
         0: {"columns": [0, 1], "color": PURPLE},
-        1: {"columns": [3, 4], "color": GREEN},
+        1: {"columns": [3, 4], "color": BLUE},
         2: {"columns": [6, 7], "color": BLUE},
-        3: {"columns": [9, 10], "color": CYAN},
+        3: {"columns": [9, 10], "color": PURPLE},
     },
     5: {
         0: {"columns": [0], "color": PURPLE},
-        1: {"columns": [2], "color": GREEN},
+        1: {"columns": [2], "color": BLUE},
         2: {"columns": [5], "color": RED},
         3: {"columns": [7], "color": BLUE},
-        4: {"columns": [9], "color": CYAN},
+        4: {"columns": [9], "color": PURPLE},
     },
 }
 
