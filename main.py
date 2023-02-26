@@ -7,12 +7,12 @@ import utime as time
 from galactic import GalacticUnicorn
 from picographics import DISPLAY_GALACTIC_UNICORN, PicoGraphics
 
-SCROLL_TIME = 750  # time in ms for a note to scroll across the screen
+SCROLL_TIME = 1000  # time in ms for a note to scroll across the screen
 BRIGHTNESS = 0.5
 HITOBJECTS_BUFFER_SIZE = 150  # number of hitobjects to buffer
-BEATMAP_FILENAME = "blue_rose.osu"
+BEATMAP_FILENAME = "happy_end_9k.osu"
 
-KeySettings = namedtuple("KeySettings", ["color", "columns"])
+KeySettings = namedtuple("KeySettings", ["color", "columns", "gu_key"])
 HitObject = namedtuple("HitObject", ["key", "time"])
 
 # create a PicoGraphics framebuffer to draw into
@@ -26,20 +26,32 @@ GREEN = graphics.create_pen(0, 255, 0)
 BLUE = graphics.create_pen(0, 0, 255)
 CYAN = graphics.create_pen(0, 255, 255)
 RED = graphics.create_pen(255, 0, 0)
+WHITE = graphics.create_pen(255, 255, 255)
 
 keys_settings = {
     4: {
-        0: KeySettings(PURPLE, columns=[0, 1]),
-        1: KeySettings(BLUE, columns=[3, 4]),
-        2: KeySettings(BLUE, columns=[6, 7]),
-        3: KeySettings(PURPLE, columns=[9, 10]),
+        0: KeySettings(PURPLE, columns=[0, 1], gu_key=GalacticUnicorn.SWITCH_A),
+        1: KeySettings(BLUE, columns=[3, 4], gu_key=GalacticUnicorn.SWITCH_B),
+        2: KeySettings(BLUE, columns=[6, 7], gu_key=GalacticUnicorn.SWITCH_C),
+        3: KeySettings(PURPLE, columns=[9, 10], gu_key=GalacticUnicorn.SWITCH_D),
     },
     5: {
-        0: KeySettings(PURPLE, columns=[0]),
-        1: KeySettings(BLUE, columns=[2]),
-        2: KeySettings(RED, columns=[5]),
-        3: KeySettings(BLUE, columns=[7]),
-        4: KeySettings(PURPLE, columns=[9]),
+        0: KeySettings(PURPLE, columns=[0], gu_key=GalacticUnicorn.SWITCH_A),
+        1: KeySettings(BLUE, columns=[2], gu_key=GalacticUnicorn.SWITCH_A),
+        2: KeySettings(RED, columns=[5], gu_key=GalacticUnicorn.SWITCH_A),
+        3: KeySettings(BLUE, columns=[8], gu_key=GalacticUnicorn.SWITCH_A),
+        4: KeySettings(PURPLE, columns=[10], gu_key=GalacticUnicorn.SWITCH_A),
+    },
+    9: {
+        0: KeySettings(PURPLE, columns=[0], gu_key=GalacticUnicorn.SWITCH_A),
+        1: KeySettings(BLUE, columns=[1], gu_key=GalacticUnicorn.SWITCH_A),
+        2: KeySettings(PURPLE, columns=[2], gu_key=GalacticUnicorn.SWITCH_A),
+        3: KeySettings(BLUE, columns=[3], gu_key=GalacticUnicorn.SWITCH_A),
+        4: KeySettings(RED, columns=[5], gu_key=GalacticUnicorn.SWITCH_A),
+        5: KeySettings(BLUE, columns=[7], gu_key=GalacticUnicorn.SWITCH_A),
+        6: KeySettings(PURPLE, columns=[8], gu_key=GalacticUnicorn.SWITCH_A),
+        7: KeySettings(BLUE, columns=[9], gu_key=GalacticUnicorn.SWITCH_A),
+        8: KeySettings(PURPLE, columns=[10], gu_key=GalacticUnicorn.SWITCH_A),
     },
 }
 
@@ -93,11 +105,16 @@ class Gameplay:
     beatmap: Beatmap
     start_time: int | None = None
     time = 0
-    hits = 0
+    combo = 0
     hitobjects: list[HitObject] = []
+    hitobjects_in_range: dict[int, list[HitObject]] = {}
+    keypress_states: dict[int, bool] = {}
 
     def __init__(self, beatmap):
         self.beatmap = beatmap
+        for key in range(self.beatmap.keys):
+            self.hitobjects_in_range[key] = []
+            self.keypress_states[key] = False
 
     def _get_key_info(self, key):
         return keys_settings[self.beatmap.keys][key]
@@ -110,6 +127,9 @@ class Gameplay:
             graphics.set_pen(BLACK)
             graphics.clear()
 
+            graphics.set_pen(WHITE)
+            graphics.text(str(self.combo), 30, 3, scale=0.5)
+
             current_time = time.ticks_ms() - self.start_time
             self.time = current_time
 
@@ -117,10 +137,16 @@ class Gameplay:
                 if hitobject.time > current_time + SCROLL_TIME:
                     break
                 remaining_time = hitobject.time - current_time
-                if remaining_time < 0:
-                    self.hits += 1
+                if remaining_time < -200:
                     self.hitobjects.remove(hitobject)
+                    self.hitobjects_in_range[hitobject.key].remove(hitobject)
+                    self.combo = 0
                     continue
+                if (
+                    remaining_time < 200
+                    and hitobject not in self.hitobjects_in_range[hitobject.key]
+                ):
+                    self.hitobjects_in_range[hitobject.key].append(hitobject)
 
                 scroll = remaining_time * GalacticUnicorn.WIDTH / SCROLL_TIME
 
@@ -128,6 +154,25 @@ class Gameplay:
                 graphics.set_pen(key_info.color)
                 for column in key_info.columns:
                     graphics.pixel(floor(scroll), column)
+
+            for key in range(self.beatmap.keys):
+                key_info = self._get_key_info(key)
+                graphics.set_pen(key_info.color)
+                for column in key_info.columns:
+                    graphics.pixel(0, column)
+                if gu.is_pressed(key_info.gu_key):
+                    graphics.set_pen(RED)
+                    for column in key_info.columns:
+                        graphics.pixel(0, column)
+
+                    if not self.keypress_states[key]:
+                        self.keypress_states[key] = True
+                        if self.hitobjects_in_range[key]:
+                            hitobject = self.hitobjects_in_range[key].pop(0)
+                            self.hitobjects.remove(hitobject)
+                            self.combo += 1
+                else:
+                    self.keypress_states[key] = False
 
             gu.update(graphics)
 
