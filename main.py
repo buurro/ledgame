@@ -92,16 +92,13 @@ class Beatmap:
 
 class Gameplay:
     beatmap: Beatmap
-    time: int
+    time = 0
     start_time: int | None
-    visible_notes: list
-    hitobjects_buffer: list
+    visible_hitobjects: list[HitObject] = []
+    hitobjects_buffer: list[HitObject] = []
 
     def __init__(self, beatmap):
         self.beatmap = beatmap
-        self.time = 0
-        self.visible_notes = []
-        self.hitobjects_buffer = []
 
     def _get_key_info(self, key):
         return keys_settings[self.beatmap.keys][key]
@@ -115,25 +112,27 @@ class Gameplay:
             graphics.clear()
 
             current_time = time.ticks_ms() - self.start_time
-            frame_time = current_time - self.time
             self.time = current_time
 
             for hitobject in self.hitobjects_buffer:
-                if hitobject.time > current_time:
+                if hitobject.time > current_time + SCROLL_TIME:
                     break
-                self.visible_notes.append(
-                    {"key": hitobject.key, "scroll": GalacticUnicorn.WIDTH}
-                )
+
+                self.visible_hitobjects.append(hitobject)
                 self.hitobjects_buffer.remove(hitobject)
 
-            for note in self.visible_notes:
-                key_info = self._get_key_info(note["key"])
+            for hitobject in self.visible_hitobjects:
+                key_info = self._get_key_info(hitobject.key)
                 graphics.set_pen(key_info["color"])
-                note["scroll"] -= frame_time / SCROLL_TIME * GalacticUnicorn.WIDTH
-                if note["scroll"] < 0:
-                    self.visible_notes.remove(note)
+                scroll = (
+                    (hitobject.time - current_time)
+                    * GalacticUnicorn.WIDTH
+                    / SCROLL_TIME
+                )
+                if scroll < 0:
+                    self.visible_hitobjects.remove(hitobject)
                 for column in key_info["columns"]:
-                    graphics.pixel(floor(note["scroll"]), column)
+                    graphics.pixel(floor(scroll), column)
 
             gu.update(graphics)
 
